@@ -12,7 +12,6 @@ from baselines.common.schedules import LinearSchedule
 from baselines import deepq
 from baselines.deepq.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 
-
 class ActWrapper(object):
     def __init__(self, act, act_params):
         self._act = act
@@ -32,7 +31,6 @@ class ActWrapper(object):
 
             zipfile.ZipFile(arc_path, 'r', zipfile.ZIP_DEFLATED).extractall(td)
             U.load_state(os.path.join(td, "model"))
-
         return ActWrapper(act, act_params)
 
     def __call__(self, *args, **kwargs):
@@ -95,7 +93,10 @@ def learn(env,
           prioritized_replay_eps=1e-6,
           num_cpu=16,
           param_noise=False,
-          callback=None):
+          callback=None,
+          initial_p=1.0,
+          pretrained_model_path=None
+          ):
     """Train a deepq model.
 
     Parameters
@@ -156,6 +157,10 @@ def learn(env,
     callback: (locals, globals) -> None
         function called at every steps with state of the algorithm.
         If callback returns true training stops.
+    initial_p: float (0 - 1.0)
+        initial value of exploration time
+    pretrained_model_path: str
+        pretrained model file path
 
     Returns
     -------
@@ -178,7 +183,8 @@ def learn(env,
         optimizer=tf.train.AdamOptimizer(learning_rate=lr),
         gamma=gamma,
         grad_norm_clipping=10,
-        param_noise=param_noise
+        param_noise=param_noise,
+        pretrained_model_path=pretrained_model_path
     )
     act_params = {
         'make_obs_ph': make_obs_ph,
@@ -199,7 +205,7 @@ def learn(env,
         beta_schedule = None
     # Create the schedule for exploration starting from 1.
     exploration = LinearSchedule(schedule_timesteps=int(exploration_fraction * max_timesteps),
-                                 initial_p=1.0,
+                                 initial_p=initial_p,
                                  final_p=exploration_final_eps)
 
     # Initialize the parameters and copy them to the target network.

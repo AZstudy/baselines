@@ -95,6 +95,7 @@ The functions in this file can are used to create the following functions:
 """
 import tensorflow as tf
 import baselines.common.tf_util as U
+import os, dill
 
 
 def default_param_noise_filter(var):
@@ -280,7 +281,7 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
 
 
 def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=None, gamma=1.0,
-    double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
+    double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None, pretrained_model_path=None):
     """Creates the train function:
 
     Parameters
@@ -319,6 +320,8 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
     param_noise_filter_func: tf.Variable -> bool
         function that decides whether or not a variable should be perturbed. Only applicable
         if param_noise is True. If set to None, default_param_noise_filter is used by default.
+    pretrained_model_path: str
+        pretrained_model_pathfrom model file
 
     Returns
     -------
@@ -334,7 +337,15 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
     debug: {str: function}
         a bunch of functions to print debug data like q_values.
     """
-    if param_noise:
+
+    if not pretrained_model_path == None and os.path.isfile(pretrained_model_path) == True:
+        print("use pretrained model : ")
+        print("\tPath : ", pretrained_model_path)
+        with open(pretrained_model_path,"rb") as f:
+            model_data, act_params = dill.load(f)
+            pretrained_action= build_act(**act_params)
+        act_f = pretrained_action
+    elif param_noise:
         act_f = build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse,
             param_noise_filter_func=param_noise_filter_func)
     else:
